@@ -196,6 +196,93 @@ Sve admin rute su zaštićene s Flask-Principal permisijama.
 
 ---
 
+## 🚀 Deployment na Render
+
+Aplikacija je spremna za deployment na Render preko GitHub auto deploya.
+
+### Preduslovi za Render
+
+1. **GitHub repozitorij** - Aplikacija mora biti na GitHubu
+2. **Render account** - Registriraj se na [render.com](https://render.com)
+3. **MongoDB Atlas** - Besplatni MongoDB hosting (ili Render MongoDB)
+
+### Koraci za deployment
+
+1. **Pushaj kod na GitHub:**
+   ```bash
+   git add .
+   git commit -m "Ready for Render deployment"
+   git push origin main
+   ```
+
+2. **Kreiraj novu Web Service na Render:**
+   - Idi na [Render Dashboard](https://dashboard.render.com)
+   - Klikni "New +" → "Web Service"
+   - Spoji GitHub repozitorij
+   - Render će automatski detektirati `render.yaml` konfiguraciju
+
+3. **Postavi Environment Varijable na Render:**
+   
+   U Render dashboardu → Environment sekciji, dodaj:
+   
+   ```env
+   FLASK_ENV=production
+   SECRET_KEY=<generiraj-sigurni-key>
+   MONGODB_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/
+   MONGODB_DB=pzw
+   ADMIN_USERNAME=admin
+   ADMIN_PASSWORD_HASH=<generirani-hash>
+   ADMIN_EMAIL=admin@unizd-oglasnik.hr
+   MAIL_SERVER=smtp.gmail.com
+   MAIL_PORT=465
+   MAIL_USE_SSL=True
+   MAIL_USE_TLS=False
+   MAIL_USERNAME=<tvoj-email>
+   MAIL_PASSWORD=<app-password>
+   MAIL_DEFAULT_SENDER=noreply@unizd-oglasnik.hr
+   MAIL_TIMEOUT=10
+   ```
+   
+   **Napomena:** Za MongoDB, koristi MongoDB Atlas (besplatno) ili Render MongoDB service.
+   
+   **VAŽNO za Email na Renderu:**
+   - Render **blokira odlazne SMTP konekcije** na port 587 (TLS)
+   - Koristi **port 465 s SSL** umjesto 587 s TLS:
+     - `MAIL_PORT=465`
+     - `MAIL_USE_SSL=True`
+     - `MAIL_USE_TLS=False`
+   - Alternativa: koristi **SendGrid** ili **Mailgun** koji imaju REST API umjesto SMTP
+   - Gmail App Password: koristi **App Password**, ne običnu lozinku
+   
+   **VAŽNO za MongoDB Atlas:**
+   - Connection string MORA biti u formatu `mongodb+srv://` (SRV format)
+   - U MongoDB Atlas Dashboardu → Network Access → dodaj IP adrese:
+     - Za testiranje: `0.0.0.0/0` (dozvoli sve IP adrese - samo za development!)
+     - Za produkciju: dodaj specificne Render IP adrese ili koristi `0.0.0.0/0` ako je ok
+   - Ako ne postaviš IP whitelist, MongoDB Atlas će odbiti konekciju
+   - Connection string format: `mongodb+srv://username:password@cluster.mongodb.net/?retryWrites=true&w=majority`
+
+4. **Build i Start Commands:**
+   
+   Render automatski koristi `render.yaml`, ali možeš ručno postaviti:
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `gunicorn app:app`
+   
+   **Napomena:** `app.py` je konfiguriran da automatski rješava problem s relativnim importima u Render okruženju. Koristi try/except blok koji pokušava relativni import, a ako ne radi, koristi `importlib` za dinamički import `__init__.py`.
+
+5. **Auto Deploy:**
+   - Render automatski deploya kada pushaš na `main` branch
+   - Možeš vidjeti build logove u real-time
+
+### Važne napomene
+
+- **MongoDB:** Koristi MongoDB Atlas (besplatno) ili Render MongoDB service
+- **HTTPS:** Render automatski omogućava HTTPS (SESSION_COOKIE_SECURE će biti True)
+- **Environment Variables:** Postavi sve varijable u Render dashboardu
+- **Admin korisnik:** Kreira se automatski pri prvom deployu
+
+---
+
 ## ✍️ Markdown podrška
 
 Aplikacija podržava **Markdown formatiranje** u opisu oglasa! Korisnici mogu koristiti:

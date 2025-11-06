@@ -154,9 +154,6 @@ class User(UserMixin):
     
     def check_password(self, password):
         """Provjeri lozinku"""
-        print(self.password_hash)
-        print(password)
-        print(generate_password_hash(password))
         return check_password_hash(self.password_hash, password)
     
     @staticmethod

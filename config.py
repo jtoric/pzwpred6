@@ -21,9 +21,13 @@ class Config:
     MAIL_SERVER = os.getenv('MAIL_SERVER', 'localhost')
     MAIL_PORT = int(os.getenv('MAIL_PORT', 587))
     MAIL_USE_TLS = os.getenv('MAIL_USE_TLS', 'True').lower() in ('true', '1', 'yes')
+    MAIL_USE_SSL = os.getenv('MAIL_USE_SSL', 'False').lower() in ('true', '1', 'yes')
     MAIL_USERNAME = os.getenv('MAIL_USERNAME', None)
     MAIL_PASSWORD = os.getenv('MAIL_PASSWORD', None)
     MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER', 'noreply@unizd-oglasnik.hr')
+    # Timeout postavke za Render (Render blokira odlazne konekcije na određene portove)
+    MAIL_TIMEOUT = int(os.getenv('MAIL_TIMEOUT', 10))
+    MAIL_SUPPRESS_SEND = os.getenv('MAIL_SUPPRESS_SEND', 'False').lower() in ('true', '1', 'yes')
     
     # Admin korisnik
     ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', None)

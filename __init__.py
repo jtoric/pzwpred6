@@ -65,7 +65,20 @@ def create_app(config_name='development'):
                 identity.provides.add(RoleNeed('admin'))
     
     # MongoDB konekcija (koristi config postavke)
-    client = MongoClient(app.config['MONGODB_URI'])
+    # MongoDB Atlas zahtijeva SSL/TLS - mongodb+srv:// automatski koristi SSL
+    mongodb_uri = app.config['MONGODB_URI']
+    
+    # Za mongodb+srv://, NE postavljamo tls=True eksplicitno jer to uzrokuje probleme
+    # SRV format automatski koristi SSL/TLS
+    # Dodajemo samo timeout opcije za bolju pouzdanost
+    client = MongoClient(
+        mongodb_uri,
+        serverSelectionTimeoutMS=5000,
+        connectTimeoutMS=10000,
+        socketTimeoutMS=10000,
+        retryWrites=True
+    )
+    
     db = client[app.config['MONGODB_DB']]
     app.config['DB'] = db
     app.config['ADS_COLLECTION'] = db['ads']
@@ -77,7 +90,7 @@ def create_app(config_name='development'):
     # Koristimo deferred initialization da možemo primijeniti limite na blueprint rute
     limiter = Limiter(
         key_func=get_remote_address,
-        default_limits=["200 per day", "50 per hour"],
+        default_limits=["20000 per day", "5000 per hour"],
         strategy="fixed-window"
     )
     limiter.init_app(app)
@@ -122,12 +135,12 @@ def create_app(config_name='development'):
         with app.app_context():
             # Primjeni limite direktno na view funkcije kroz app.view_functions
             if 'auth.login' in app.view_functions:
-                app.view_functions['auth.login'] = limiter.limit("5 per minute")(app.view_functions['auth.login'])
+                app.view_functions['auth.login'] = limiter.limit("10 per minute")(app.view_functions['auth.login'])
             if 'auth.register' in app.view_functions:
-                app.view_functions['auth.register'] = limiter.limit("3 per minute")(app.view_functions['auth.register'])
+                app.view_functions['auth.register'] = limiter.limit("10 per minute")(app.view_functions['auth.register'])
             if 'auth.resend_verification' in app.view_functions:
-                app.view_functions['auth.resend_verification'] = limiter.limit("2 per minute")(app.view_functions['auth.resend_verification'])
-    
+                app.view_functions['auth.resend_verification'] = limiter.limit("10 per minute")(app.view_functions['auth.resend_verification'])
+
     # Dodaj route za slike na root level (bez /ads/ prefiksa)
     app.add_url_rule('/image/<image_id>', 'get_image', get_image)
     

@@ -5,8 +5,17 @@ from threading import Thread
 def send_async_email(app, msg):
     """Šalje email asinkrono u novom threadu"""
     with app.app_context():
-        mail = current_app.extensions['mail']
-        mail.send(msg)
+        mail = current_app.extensions.get('mail')
+        if not mail:
+            app.logger.warning("Mail extension not found, email not sent")
+            return
+        
+        try:
+            mail.send(msg)
+            app.logger.info(f"Email sent successfully to {msg.recipients}")
+        except Exception as e:
+            app.logger.error(f"Failed to send email: {str(e)}", exc_info=True)
+            # Ne re-raise exception da ne blokira aplikaciju
 
 def send_verification_email(user):
     """Šalje email za verifikaciju email adrese"""

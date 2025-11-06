@@ -6,23 +6,63 @@ Projekt je razvijen kao dio kolegija **Programiranje za Web (SIT UNIZD)**.
 ---
 
 ## ✨ Funkcionalnosti
-- Autentikacija korisnika (registracija, prijava, odjava) preko Flask-Login
+
+### Autentikacija i autorizacija
+- Autentikacija korisnika (registracija, prijava, odjava) preko **Flask-Login**
 - Verifikacija email adrese (link s rokom od 1h, `itsdangerous.URLSafeTimedSerializer`)
+- **Role-based access control** preko **Flask-Principal**
+  - Korisničke uloge: `user` (default) i `admin`
+  - Admin korisnici imaju pristup admin panelu
+- **Rate limiting** preko **Flask-Limiter** (brute-force zaštita)
+  - Login: 5 zahtjeva/minutu
+  - Registracija: 3 zahtjeva/minutu
+  - Resend verification: 2 zahtjeva/minutu
+
+### Korisnički profil
 - Korisnički profil: ime, prezime, broj mobitela, profilna slika (GridFS)
 - Pregled i uređivanje profila
+- Automatsko kreiranje admin korisnika pri pokretanju aplikacije
+
+### Admin funkcionalnosti
+- **Admin panel** (`/admin/users`) za upravljanje korisnicima
+- **CRUD operacije** na korisnicima (Create, Read, Update, Delete)
+  - Kreiranje novih korisnika
+  - Pregled svih korisnika
+  - Uređivanje korisnika (username, email, role, lozinka, email verificiran)
+  - Brisanje korisnika (admin ne može obrisati samog sebe)
+- Zaštita admin ruta s Flask-Principal permisijama
+
+### Oglasi
 - "Moji oglasi" (`/ads/my`) s pretragom, filtriranjem i paginacijom
 - Dodavanje novog oglasa putem forme
-- **Uređivanje postojećih oglasa** i **Brisanje oglasa** (samo vlasnik)
+- **Uređivanje postojećih oglasa** i **Brisanje oglasa**
+  - Samo vlasnik oglasa ili admin mogu uređivati/brisati
+  - Zaštita preko Flask-Principal permisija
 - **Markdown editor (EasyMDE)** za opis oglasa
   - Live preview, toolbar, naslovi/liste/linkovi/citati
 - Polja oglasa: naslov, opis, cijena, kategorija, lokacija, slika
   - Ime prodavača i broj mobitela automatski se preuzimaju iz profila korisnika
-- Validacija unosa (obavezna polja, duljina…)
+- Filtriranje po kategorijama (radi i u "Moji oglasi")
+
+### Sigurnost
+- **Session i Cookie sigurnost** (configurirano preko `config.py`)
+  - `SESSION_COOKIE_HTTPONLY = True` (nema JS pristupa)
+  - `SESSION_COOKIE_SAMESITE = 'Lax'` (CSRF zaštita)
+  - `SESSION_COOKIE_SECURE` (True u production, False u development)
+  - `REMEMBER_COOKIE_DURATION = 7 dana`
+- **Sigurnosni HTTP headeri** (`@app.after_request`)
+  - `X-Content-Type-Options: nosniff` (sprječava MIME sniffing)
+  - `X-Frame-Options: DENY` (sprječava clickjacking)
+  - `Referrer-Policy: strict-origin-when-cross-origin`
 - **Sanitizacija HTML-a** (XSS zaštita) i CSRF zaštita (Flask-WTF)
+- **Rate limiting** za zaštitu od brute-force napada
+
+### Tehnički detalji
+- Validacija unosa (obavezna polja, duljina…)
 - Flash poruke, PRG (Post → Redirect → Get)
 - Bootstrap 5 za izgled i layout
 - Spremanje oglasa u **MongoDB**, slike u **GridFS**
-- Filtriranje po kategorijama (radi i u "Moji oglasi")
+- Konfiguracija preko `config.py` (Development/Production klase)
 
 ---
 
@@ -121,6 +161,38 @@ Projekt je razvijen kao dio kolegija **Programiranje za Web (SIT UNIZD)**.
    ```
 
 **Napomena:** Admin korisnik se automatski kreira pri prvom pokretanju aplikacije ako ne postoji. Možeš se prijaviti s `ADMIN_USERNAME` i lozinkom koju si koristio za generiranje hash-a.
+
+### Sigurnosne postavke
+
+Aplikacija koristi konfiguracijske klase (`config.py`) za različita okruženja:
+
+- **Development**: `SESSION_COOKIE_SECURE = False` (radi na HTTP)
+- **Production**: `SESSION_COOKIE_SECURE = True` (zahtijeva HTTPS)
+
+Za pokretanje u production modu:
+```bash
+# U app.py ili kroz environment varijablu
+app = create_app('production')
+```
+
+### Rate Limiting
+
+Aplikacija koristi **Flask-Limiter** za zaštitu od brute-force napada:
+- **Login**: 5 zahtjeva po minuti
+- **Registracija**: 3 zahtjeva po minuti  
+- **Resend verification**: 2 zahtjeva po minuti
+
+Prekoračenje limita vraća 429 (Too Many Requests) error sa custom error stranicom.
+
+### Admin Panel
+
+Admin korisnici mogu pristupiti admin panelu kroz navigaciju:
+- **Lista korisnika**: `/admin/users`
+- **Kreiranje korisnika**: `/admin/users/new`
+- **Uređivanje korisnika**: `/admin/users/<user_id>/edit`
+- **Brisanje korisnika**: `/admin/users/<user_id>/delete` (POST)
+
+Sve admin rute su zaštićene s Flask-Principal permisijama.
 
 ---
 

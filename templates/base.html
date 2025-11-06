@@ -88,6 +88,12 @@
                                 <li><a class="dropdown-item" href="{{ url_for('ads.my_ads') }}">
                                     <i class="bi bi-card-list"></i> Moji oglasi
                                 </a></li>
+                                {% if current_user.is_authenticated and current_user.role == 'admin' %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ url_for('admin.users') }}">
+                                    <i class="bi bi-shield-lock"></i> Admin panel
+                                </a></li>
+                                {% endif %}
                                 <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">
                                     <i class="bi bi-box-arrow-right"></i> Odjava
                                 </a></li>

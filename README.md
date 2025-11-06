@@ -75,23 +75,52 @@ Projekt je razvijen kao dio kolegija **Programiranje za Web (SIT UNIZD)**.
    MAIL_USERNAME=tvoj-email@gmail.com
    MAIL_PASSWORD=tvoja-app-lozinka
    MAIL_DEFAULT_SENDER=noreply@unizd-oglasnik.hr
+
+   # Admin korisnik (automatski se kreira pri pokretanju aplikacije)
+   ADMIN_USERNAME=admin
+   ADMIN_PASSWORD_HASH=pbkdf2:sha256:600000$...  # Generiraj pomoću naredbe u nastavku
+   ADMIN_EMAIL=admin@unizd-oglasnik.hr
    ```
 
-4. Osiguraj da MongoDB radi:
+4. Generiraj password hash za admin korisnika:
+   ```bash
+   # Generiraj password hash za admin lozinku
+   python -c "from werkzeug.security import generate_password_hash; print(generate_password_hash('tvoja-admin-lozinka'))"
+   ```
+   
+   Kopiraj generirani hash i zalijepi u `.env` datoteku kao vrijednost za `ADMIN_PASSWORD_HASH`.
+   
+   **Primjer:**
+   ```bash
+   python -c "from werkzeug.security import generate_password_hash; print(generate_password_hash('tvoja-admin-lozinka'))"
+   ```
+   Output će biti nešto poput:
+   ```
+   pbkdf2:sha256:600000$XxXxXxXx$...
+   ```
+   
+   Zalijepi taj hash u `.env`:
+   ```env
+   ADMIN_PASSWORD_HASH=pbkdf2:sha256:600000$XxXxXxXx$...
+   ```
+
+5. Osiguraj da MongoDB radi:
    ```bash
    # Provjeri da li MongoDB radi na localhost:27017
    # Ako ne radi, pokreni MongoDB server
    ```
 
-5. Pokreni aplikaciju:
+6. Pokreni aplikaciju:
    ```bash
    python app.py
    ```
 
-6. Otvori u browseru:
+7. Otvori u browseru:
    ```
    http://127.0.0.1:5000/
    ```
+
+**Napomena:** Admin korisnik se automatski kreira pri prvom pokretanju aplikacije ako ne postoji. Možeš se prijaviti s `ADMIN_USERNAME` i lozinkom koju si koristio za generiranje hash-a.
 
 ---
 

@@ -1,5 +1,6 @@
 from flask import render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
+from flask_principal import identity_changed, Identity, AnonymousIdentity
 from . import bp
 from .forms import LoginForm, RegisterForm, ProfileForm
 from .models import User
@@ -24,6 +25,10 @@ def login():
                 return redirect(url_for('auth.login'))
             
             login_user(user, remember=form.remember_me.data)
+            
+            # Postavi identity za flask_principal
+            identity_changed.send(current_app._get_current_object(), identity=Identity(user.id))
+            
             flash(f'Dobrodošli, {user.username}!', 'success')
             
             # Preusmjeravanje na stranicu gdje je korisnik želio ići
@@ -68,6 +73,10 @@ def logout():
     """Odjava korisnika"""
     username = current_user.username
     logout_user()
+    
+    # Postavi anonymous identity za flask_principal
+    identity_changed.send(current_app._get_current_object(), identity=AnonymousIdentity())
+    
     flash(f'Odjavljeni ste, {username}.', 'info')
     return redirect(url_for('main.index'))
 

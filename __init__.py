@@ -1,6 +1,8 @@
 from flask import Flask, render_template, abort
 from flask_bootstrap import Bootstrap5
-from flask_login import LoginManager
+from flask_login import LoginManager, current_user
+from flask_principal import Principal, Identity, AnonymousIdentity, RoleNeed, UserNeed, Permission
+from flask_principal import identity_loaded, identity_changed
 from flask_mail import Mail
 from pymongo import MongoClient
 from dotenv import load_dotenv
@@ -9,6 +11,7 @@ import os
 from .main import bp as main_bp
 from .ads import bp as ads_bp
 from .auth import bp as auth_bp
+from .admin import bp as admin_bp
 from .ads.routes import get_image
 from .utils import markdown_to_html
 from .auth.models import User
@@ -48,6 +51,23 @@ def create_app(config_name='development'):
     def load_user(user_id):
         return User.get_by_id(user_id)
     
+    # Inicijalizacija Flask-Principal
+    principal = Principal(app)
+    
+    # Definiranje permission-a
+    admin_permission = Permission(RoleNeed('admin'))
+    
+    # Postavljanje identity-ja kada korisnik ulazi
+    @identity_loaded.connect_via(app)
+    def on_identity_loaded(sender, identity):
+        """Postavlja identity kada korisnik ulazi u aplikaciju"""
+        if current_user.is_authenticated:
+            identity.user = current_user
+            identity.provides.add(UserNeed(current_user.id))
+            
+            if current_user.role == 'admin':
+                identity.provides.add(RoleNeed('admin'))
+    
     # MongoDB konekcija
     client = MongoClient(os.getenv('MONGODB_URI', 'mongodb://localhost:27017/'))
     db = client[os.getenv('MONGODB_DB', 'pzw')]
@@ -56,10 +76,36 @@ def create_app(config_name='development'):
     app.config['USERS_COLLECTION'] = db['users']
     app.config['GRIDFS'] = gridfs.GridFS(db)
     
+    # Kreiranje admin korisnika ako ne postoji
+    with app.app_context():
+        admin_username = os.getenv('ADMIN_USERNAME')
+        admin_password_hash = os.getenv('ADMIN_PASSWORD_HASH')
+        admin_email = os.getenv('ADMIN_EMAIL', 'admin@unizd-oglasnik.hr')
+        
+        if admin_username and admin_password_hash:
+            users_collection = app.config['USERS_COLLECTION']
+            existing_admin = users_collection.find_one({'username': admin_username})
+            
+            if not existing_admin:
+                user_data = {
+                    'username': admin_username,
+                    'email': admin_email,
+                    'password_hash': admin_password_hash,  # Direktno upisujemo hash iz .env
+                    'email_verified': True,  # Admin email je automatski verificiran
+                    'role': 'admin',
+                    'first_name': '',
+                    'last_name': '',
+                    'phone': '',
+                    'profile_image_id': None
+                }
+                users_collection.insert_one(user_data)
+                print(f'Admin korisnik "{admin_username}" kreiran.')
+    
     # Registracija blueprint-a
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(ads_bp, url_prefix='/ads')
+    app.register_blueprint(admin_bp, url_prefix='/admin')
     
     # Dodaj route za slike na root level (bez /ads/ prefiksa)
     app.add_url_rule('/image/<image_id>', 'get_image', get_image)

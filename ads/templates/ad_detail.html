@@ -69,6 +69,7 @@
                                 <a href="{{ url_for('ads.ads') }}" class="btn btn-outline-secondary">
                                     <i class="bi bi-arrow-left"></i> Povratak na oglase
                                 </a>
+                                {% if can_edit %}
                                 <a href="{{ url_for('ads.edit_ad', ad_id=ad._id) }}" class="btn btn-outline-primary">
                                     <i class="bi bi-pencil"></i> Uredi
                                 </a>
@@ -78,6 +79,7 @@
                                         <i class="bi bi-trash"></i> Obriši
                                     </button>
                                 </form>
+                                {% endif %}
                             </div>
 
                         </div>

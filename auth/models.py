@@ -14,6 +14,7 @@ class User(UserMixin):
         self.email = user_data.get('email', '')
         self.password_hash = user_data['password_hash']
         self.email_verified = user_data.get('email_verified', False)
+        self.role = user_data.get('role', 'user')  # Default role je 'user'
         # Profil podaci
         self.first_name = user_data.get('first_name', '')
         self.last_name = user_data.get('last_name', '')
@@ -80,6 +81,7 @@ class User(UserMixin):
             'email': email,
             'password_hash': password_hash,
             'email_verified': False,
+            'role': 'user',  # Default role
             'first_name': '',
             'last_name': '',
             'phone': '',
@@ -152,5 +154,33 @@ class User(UserMixin):
     
     def check_password(self, password):
         """Provjeri lozinku"""
+        print(self.password_hash)
+        print(password)
+        print(generate_password_hash(password))
         return check_password_hash(self.password_hash, password)
+    
+    @staticmethod
+    def get_all():
+        """Dohvaća sve korisnike"""
+        users_collection = User._get_collection()
+        users = []
+        for user_data in users_collection.find():
+            users.append(User(user_data))
+        return users
+    
+    def update_role(self, new_role):
+        """Ažurira role korisnika"""
+        if new_role not in ['user', 'admin']:
+            raise ValueError('Nevažeća role')
+        users_collection = User._get_collection()
+        users_collection.update_one(
+            {'_id': ObjectId(self.id)},
+            {'$set': {'role': new_role}}
+        )
+        self.role = new_role
+    
+    def delete(self):
+        """Briše korisnika iz baze"""
+        users_collection = User._get_collection()
+        users_collection.delete_one({'_id': ObjectId(self.id)})
 

@@ -3,10 +3,36 @@ from flask import render_template, request, flash, redirect, url_for, Response, 
 from datetime import datetime
 
 from flask_login import current_user, login_required
+from flask_principal import Permission, RoleNeed, UserNeed
 
 from .forms import AdForm, EditAdForm
 from . import bp
 from ..utils import get_pagination_info, get_pagination_range
+
+# Admin permission
+admin_permission = Permission(RoleNeed('admin'))
+
+def can_edit_ad(ad):
+    """Provjerava da li korisnik može uređivati/brisati oglas (admin ili vlasnik)
+    
+    Koristi Flask-Principal Permission sistem:
+    - Admin ima RoleNeed('admin') permisiju
+    - Vlasnik ima UserNeed(user_id) permisiju koja se provjerava
+    """
+    if not current_user.is_authenticated:
+        return False
+    
+    # Provjeri admin permisiju
+    if admin_permission.can():
+        return True
+    
+    # Provjeri da li je korisnik vlasnik oglasa
+    ad_owner_id = str(ad.get('user_id')) if ad.get('user_id') else None
+    if ad_owner_id:
+        owner_permission = Permission(UserNeed(ad_owner_id))
+        return owner_permission.can()
+    
+    return False
 
 @bp.route('/')
 def ads():
@@ -110,7 +136,10 @@ def ad_detail(ad_id):
     if not ad:
         abort(404)
     
-    return render_template('ad_detail.html', ad=ad)
+    # Provjeri da li korisnik može uređivati/brisati oglas
+    can_edit = can_edit_ad(ad)
+    
+    return render_template('ad_detail.html', ad=ad, can_edit=can_edit)
 
 @bp.route('/<ad_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -123,10 +152,11 @@ def edit_ad(ad_id):
     if not ad:
         abort(404)
     
-    form = EditAdForm()
-    # Dozvoli uređivanje samo vlasniku
-    if ad.get('user_id') and str(ad.get('user_id')) != str(current_user.id):
+    # Provjeri permisije: admin ili vlasnik oglasa
+    if not can_edit_ad(ad):
         abort(403)
+    
+    form = EditAdForm()
     
     if form.validate_on_submit():
         updated_ad = {
@@ -199,8 +229,8 @@ def delete_ad(ad_id):
     if not ad:
         abort(404)
     
-    # Dozvoli brisanje samo vlasniku
-    if ad.get('user_id') and str(ad.get('user_id')) != str(current_user.id):
+    # Provjeri permisije: admin ili vlasnik oglasa
+    if not can_edit_ad(ad):
         abort(403)
 
     # Obriši sliku iz GridFS ako postoji
